@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<!--
+	作者: wallimn, http://wallimn.iteye.com
+	时间:2017年1月7日
+	功能：snap.svg.js学习之-时间认知
+-->
+<html lang="zh-cn">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+	<meta http-equiv="pragma" content="no-cache">  
+	<meta http-equiv="cache-control" content="no-cache">  
+	<meta http-equiv="expires" content="0">     
+    <title>时间认知-wallimn</title>
+    <style type="text/css">
+    	html,body{
+    		width:100%;
+    		height:100%;
+    	}
+		#svg {
+			margin:0;
+			position:relative;
+			top:50%;
+			border-radius:5px;
+			border:1px solid #efefef;
+		}
+		text{
+			font-size:14px;
+		}
+    </style>
+  </head>
+  <body>
+  
+ 
+	<svg id='paper'></svg>
+  
+  
+    <script type="text/javascript" src="js/jquery-1.11.1.min.js"></script>
+	<script type="text/javascript" src="js/snap.svg.js"></script>
+	<script type="text/javascript" src="js/hammer-2.0.8.js"></script>
+    
+	<script type="text/javascript">
+	
+	    $(function(){
+	    	//阻止长按网页出现菜单
+	    	window.ontouchstart = function(e) { e.preventDefault(); }
+	    	var clientWidth=document.body.clientWidth;
+	    	var clientHeight=document.body.clientHeight;
+			$("#paper").css("width",clientWidth+"px").css("height",clientHeight+"px");
+	    	var minsize = Math.min(clientWidth,clientHeight);
+	    	var paper = Snap("#paper");
+	    	
+	    	var centerX=clientWidth/2, centerY=clientHeight/2 ;
+	    	
+	    	
+	    	var radius =Math.round( minsize/2*0.8);
+	    	var hourLen = Math.round(radius*0.65),hourDeta=6;//时针长度
+	    	var minLen = Math.round(radius*0.8),minDeta=12;//分针长度
+	    	var numLen =  Math.round(radius*0.86);//数字半径
+	    	
+	    	var clock = paper.circle(centerX,centerY,radius);
+	    	clock.attr({fill:'#0000cc',stroke:'#0000ff',strokeWidth:6,'fill-opacity':0.6});
+	    	
+	    	var x,y,ang;
+	    	for(var i=0; i<12; i++){
+	    		ang = Math.PI/2-i*2*Math.PI/12-30*Math.PI/180;
+	    		x = centerX+numLen*Math.cos(ang);
+	    		y = centerY-numLen*Math.sin(ang);
+	    		paper.text(x,y,i+1).attr({'text-anchor':'middle','dominant-baseline':'middle','font-size':32});
+	    	}
+	    	
+	    	var hourHand = paper.polygon(centerX-hourDeta*2,centerY,centerX,centerY+hourDeta,centerX+hourLen,centerY,centerX,centerY-hourDeta,centerX-hourDeta*2,centerY).attr({stroke:'black',"data-id":'hourHand',"data-selected":'false',"data-angle":0,strokeWidth:2,strokeOpacity:0.8,'fill-opacity':0.5,fill:'black'});
+	    	var minHand = paper.polygon(centerX-minDeta*2,centerY,centerX,centerY+minDeta,centerX+minLen,centerY,centerX,centerY-minDeta,centerX-minDeta*2,centerY).attr({stroke:'black',"data-id":'minHand',"data-selected":'false',"data-angle":0,strokeWidth:2,strokeOpacity:0.8,'fill-opacity':0.5,fill:'black'});
+	    	
+	    	window.hourHand = hourHand;
+	    	window.minHand = minHand;
+	    	
+	    	//旋转表针的函数
+	    	function rotateHand(hand,resultAng){
+	    		var oldang = hand.attr("data-angle");
+	    		if(resultAng<0)resultAng=360+resultAng;
+	    		else if (resultAng>360)resultAng = resultAng-360;
+	    		//console.log("初始角度：",oldang,"，最终角度：",resultAng);
+	    		//Snap.Matrix().rotate()函数中指定的角度是最终结果的角度。
+	    		//hand.transform(new Snap.Matrix().rotate(resultAng,centerX,centerY));
+	    		Snap.animate(oldang,resultAng,function(value){
+	    			hand.transform(new Snap.Matrix().rotate(value,centerX,centerY));
+	    		},100);
+	    		hand.attr({"data-angle":resultAng});
+	    	}
+	    	
+	    	//初始状态设置
+	    	rotateHand(hourHand,-90);
+	    	rotateHand(minHand,-90);
+	    	
+	    	
+	    	var minHanmmer = new Hammer($('[data-id=minHand]')[0]);
+	    	minHanmmer.add(new Hammer.Pan({direction:Hammer.DIRECTION_ALL,threshold:0}));
+	    	minHanmmer.on("panstart",function(ev){
+	    		var element = $(ev.target);
+	    		element.attr("stroke","red");
+	    		element.attr("data-selected",'true');
+	    	});
+	    	minHanmmer.on("panend",function(ev){
+	    		$(ev.target).attr("stroke","black").attr("data-selected",'false');
+	    	});
+	    	minHanmmer.on("panmove",function(ev){
+	    		if(minHand.attr("data-selected")=='true' && ev.pointers.length>=1){
+	    			var px = ev.pointers[0].clientX;
+	    			var py = ev.pointers[0].clientY;
+	    			var ang = Math.atan2((py-centerY),(px-centerX))*180/Math.PI;
+	    			if(ang<0)ang=360+ang;
+	    			var deta =ang- parseFloat(minHand.attr("data-angle"));
+	    			if(deta<-300)deta=deta+360;
+	    			else if(deta>300)deta=deta-360;
+	    			var hourAng = parseFloat(hourHand.attr("data-angle"))+deta/12.0;
+	    			
+	    			rotateHand(minHand,ang);
+	    			rotateHand(hourHand,hourAng);
+	    		}
+	    	});
+
+	    	
+	    	var hourHanmmer = new Hammer($('[data-id=hourHand]')[0]);
+	    	hourHanmmer.add(new Hammer.Pan({direction:Hammer.DIRECTION_ALL,threshold:0}));
+	    	hourHanmmer.on("panstart",function(ev){
+	    		var element = $(ev.target);
+	    		element.attr("stroke","red");
+	    		element.attr("data-selected",'true');
+	    	});
+	    	hourHanmmer.on("panend",function(ev){
+	    		$(ev.target).attr("stroke","black").attr("data-selected",'false');
+	    	});
+	    	hourHanmmer.on("panmove",function(ev){
+	    		if(hourHand.attr("data-selected")=='true'){
+	    			var px = ev.pointers[0].clientX;
+	    			var py = ev.pointers[0].clientY;
+	    			var ang = Math.atan2((py-centerY),(px-centerX))*180/Math.PI;
+	    			if(ang<0)ang=360+ang;
+	    			var deta =ang- parseFloat(hourHand.attr("data-angle"));
+	    			if(deta<-300)deta=deta+360;
+	    			else if(deta>300)deta=deta-360;
+	    			var hourAng = parseFloat(minHand.attr("data-angle"))+deta*12;
+	    			
+	    			rotateHand(hourHand,ang);
+	    			rotateHand(minHand,hourAng);
+	    		}
+	    	});
+	    	
+	    	//输出提示文字
+	    	var tipText = paper.text(centerX,centerY*2-8,"按住表针拖动可移动表针").attr({'text-anchor':'middle','dominant-baseline':'middle',fill:'red','font-size':12});
+	    	//绘制按钮、并设置事件
+	    	var textdeta=40;//文字中心跟底端的距离
+	    	var whenText = paper.text(centerX,centerY*2-textdeta,"几点了？").attr({'text-anchor':'middle','dominant-baseline':'middle','font-size':24});
+	    	var bbox = whenText.getBBox();
+	    	var detax=5,detay=8;
+	    	var whenRect = paper.rect(centerX-bbox.width/2-detax,centerY*2-textdeta-bbox.height/2-detay,
+	    			bbox.width+detax*2,bbox.height+detay*2,3,3);
+	    	whenRect.attr({fill:'#00ff00',stroke:'#00ff00',strokeWidth:1,'fill-opacity':0.1});
+	    	var whenHanmmer = new Hammer(whenRect.node);
+	    	//阻止了touchstart事件后，click事件就不好使用了。只能用tap事件了。
+	    	whenHanmmer.on("tap",function(){
+	    		var hourAng = hourHand.attr("data-angle");
+	    		hourAng = hourAng-270;//与指针相匹配的角度
+	    		if(hourAng<0)hourAng=hourAng+360;
+	    		var hourNum = Math.floor(hourAng/30);
+	    		if(hourNum==0)hourNum=12;
+	    		
+	    		
+	    		var minAng = minHand.attr("data-angle");
+	    		minAng = minAng-270;
+	    		if(minAng<0)minAng=minAng+360;
+	    		var minNum = Math.round(minAng/6);
+	    		if(minNum==60)minNum=0;
+	    		//console.log("时针角度：",hourAng,",分针角度：",minAng,",时间",hourNum+":"+minNum);
+	    		alert("时间："+hourNum+":"+minNum);
+	    	});
+		});
+	</script>
+  </body>
+</html>
