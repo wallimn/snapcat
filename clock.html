@@ -174,7 +174,13 @@
 	    		var minNum = Math.round(minAng/6);
 	    		if(minNum==60)minNum=0;
 	    		//console.log("时针角度：",hourAng,",分针角度：",minAng,",时间",hourNum+":"+minNum);
-	    		alert("时间："+hourNum+":"+minNum);
+	    		//alert("时间："+hourNum+":"+minNum);
+	    		var time = paper.text(centerX,centerY*2-textdeta*2,hourNum+":"+minNum).attr({'text-anchor':'middle',fill:'red','dominant-baseline':'middle','font-size':36});
+	    		Snap.animate(1,0,function(value){
+	    			time.attr({"opacity":value});
+	    		},3000,mina.easeout,function(){
+	    			time.remove();
+	    		});
 	    	});
 		});
 	</script>
